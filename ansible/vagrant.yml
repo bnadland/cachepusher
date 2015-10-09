@@ -1,0 +1,35 @@
+---
+# This is just for demonstration purposes. Please don't use this for anything serious.
+# I run ansible from the vm to not add a host dependency on ansible and because it is
+# a pita to run the postgresql_* tasks with the vagrant user
+- hosts: all
+  gather_facts: no
+  become: yes
+  environment:
+    GOPATH: /data/go
+  vars:
+    project_dir: /data/go/src/github.com/bnadland/cachepusher/syncer
+    cp_bin: /data/{{ project }}/{{ project }}
+    project: cachepusher
+    cp_dsn: "postgresql://{{ project }}:{{ project }}@127.0.0.1:5432/{{ project }}?sslmode=disable"
+    backend_env: /tmp/backend
+    cp_schema: /data/ansible/backendsimulator/schema.sql
+  tasks:
+    - name: Provisioning
+      include: tasks/provision.yml
+    - name: Backendsimulator
+      include: tasks/backendsimulator.yml
+    - name: Deployment
+      include: tasks/deployment.yml
+
+    # Vagrant specific:
+    - name: Make redis listen on correct interface
+      lineinfile: name=/etc/redis/redis.conf line="bind 127.0.0.1 10.10.42.23"
+    - name: Restart redis
+      service: name=redis-server state=restarted
+    - name: Make postgresql listen on correct interface
+      lineinfile: name=/etc/postgresql/9.4/main/postgresql.conf line="listen_addresses='*'"
+    - name: Add vagrant host permissions to postgresql
+      lineinfile: name=/etc/postgresql/9.4/main/pg_hba.conf line="host  all     all     10.10.42.1/32       md5"
+    - name: Restart postgresql
+      service: name=postgresql state=restarted

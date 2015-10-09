@@ -1,0 +1,17 @@
+---
+- name: Grab dependencies for {{ project }}
+  shell: go get
+  become_user: "{{ project }}"
+  args:
+    chdir: "{{ project_dir }}"
+- name: Build {{ project }}
+  shell: go build -o {{ cp_bin }}
+  become_user: "{{ project }}"
+  args:
+    chdir: "{{ project_dir }}"
+- name: Update supervisor config for {{ project }}
+  template: src=/data/ansible/config/supervisor-cp.conf dest=/etc/supervisor/conf.d/cp.conf
+- name: Reload supervisor config for {{ project }}
+  service: name=supervisor state=restarted
+- name: Restart {{ project }}
+  supervisorctl: name=cp state=stopped

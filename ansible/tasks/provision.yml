@@ -1,0 +1,32 @@
+---
+- name: Prepare project user
+  user: name={{ project }} state=present
+- name: Prepare syncer directory
+  file: path=/data/go owner={{ project }} state=directory recurse=yes
+- name: Prepare syncer destination directory
+  file: path=/data/{{ project }} owner={{ project }} state=directory recurse=yes
+- name: Prepare log directory
+  file: path=/var/log/{{ project }} owner={{ project }} state=directory recurse=yes
+- name: Prepare server dependencies
+  apt: state=installed name={{ item }} update_cache=yes cache_valid_time=600
+  with_items:
+    - git
+    - golang
+    - supervisor
+    - redis-server
+    - postgresql-9.4
+    - postgresql-server-dev-9.4
+    - python-psycopg2
+    - python-virtualenv
+- name: Prepare project database user
+  postgresql_user: name={{ project }} password={{ project }} state=present
+  become_user: postgres
+- name: Prepare project database
+  postgresql_db: name={{ project }} owner={{ project }} state=present
+  become_user: postgres
+- name: Prepare database schema
+  command: /data/ansible/backendsimulator/migrate.py
+  environment:
+    CP_DSN: "{{ cp_dsn }}"
+    CP_SCHEMA: "{{ cp_schema }}"
+  become_user: "{{ project }}"

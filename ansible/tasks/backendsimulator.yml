@@ -1,0 +1,13 @@
+---
+- name: Install dependencies for backendsimulator
+  pip: name={{ item }} virtualenv={{ backend_env }} virtualenv_site_packages=yes
+  become_user: "{{ project }}"
+  no_log: no
+  with_items:
+    - fake-factory
+    - psycopg2
+- name: Run backendsimulator and add fake data
+  shell: "{{ backend_env }}/bin/python /data/ansible/backendsimulator/fakedata.py"
+  environment:
+    CP_DSN: "{{ cp_dsn }}"
+  become_user: "{{ project }}"
